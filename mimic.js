@@ -53,6 +53,9 @@ function onStart() {
     detector.start();  // start detector
   }
   log('#logs', "Start button pressed");
+  resetScore();
+  getNewEmoji = true;
+  timer = 0;
 }
 
 // Stop button
@@ -62,6 +65,9 @@ function onStop() {
     detector.removeEventListener();
     detector.stop();  // stop detector
   }
+  stopAmbientalSound();
+  $("#target").html('?');
+  resetScore();
 };
 
 // Reset button
@@ -75,6 +81,10 @@ function onReset() {
 
   // TODO(optional): You can restart the game as well
   // <your code here>
+   resetScore();
+   getNewEmoji = true;
+   $("#target").html('?');
+   timer = 0;
 };
 
 // Add a callback to notify when camera access is allowed
@@ -103,6 +113,8 @@ detector.addEventListener("onInitializeSuccess", function() {
 
   // TODO(optional): Call a function to initialize the game, if needed
   // <your code here>
+    startAmbientalSound();
+    setInterval(function () { ++timer;}, 1000);
 });
 
 // Add a callback to receive the results from processing an image
@@ -133,7 +145,7 @@ detector.addEventListener("onImageResultsSuccess", function(faces, image, timest
     drawEmoji(canvas, image, faces[0]);
 
     // TODO: Call your function to run the game (define it first!)
-    // <your code here>
+    playMimic(canvas, faces[0]);
   }
 });
 
@@ -147,7 +159,9 @@ function drawFeaturePoints(canvas, img, face) {
 
   // TODO: Set the stroke and/or fill style you want for each feature point marker
   // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D#Fill_and_stroke_styles
-  // <your code here>
+  //console.log(face)
+  ctx.fillStyle = 'rgb(42,255,0)';
+  ctx.strokeStyle = 'rgb(42,255,0)';
   
   // Loop over each feature point in the face
   for (var id in face.featurePoints) {
@@ -155,7 +169,10 @@ function drawFeaturePoints(canvas, img, face) {
 
     // TODO: Draw feature point, e.g. as a circle using ctx.arc()
     // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/arc
-    // <your code here>
+    ctx.beginPath();
+    ctx.arc(featurePoint.x, featurePoint.y, 2, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
   }
 }
 
@@ -164,6 +181,10 @@ function drawEmoji(canvas, img, face) {
   // Obtain a 2D context object to draw on the canvas
   var ctx = canvas.getContext('2d');
 
+
+  //console.log(face.measurements.interoculardistance);
+
+
   // TODO: Set the font and style you want for the emoji
   // <your code here>
   
@@ -171,6 +192,11 @@ function drawEmoji(canvas, img, face) {
   // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillText
   // TIP: Pick a particular feature point as an anchor so that the emoji sticks to your face
   // <your code here>
+  ctx.fillStyle = 'rgb(42,255,0)';
+  ctx.font = face.measurements.interocularDistance+'px Arial';
+  ctx.fillText(face.emojis.dominantEmoji, 
+              face.featurePoints[5].x-face.measurements.interocularDistance-20, 
+              face.featurePoints[5].y);  
 }
 
 // TODO: Define any variables and functions to implement the Mimic Me! game mechanics
@@ -185,5 +211,97 @@ function drawEmoji(canvas, img, face) {
 // Optional:
 // - Define an initialization/reset function, and call it from the "onInitializeSuccess" event handler above
 // - Define a game reset function (same as init?), and call it from the onReset() function above
+var getNewEmoji = true;
+var emojiToMimic= 0;
+var correct = 0;
+var total = 5;
+var ambientalSound;
+function playMimic( canvas, face ){
 
-// <your code here>
+    drawTime(canvas);
+
+    if( emojiToMimic == toUnicode(face.emojis.dominantEmoji) ){
+        myAudio = new Audio('NFF-bounce-02.wav'); 
+        myAudio.play();
+        correct++;
+        setScore(correct, total);
+        getNewEmoji = true;
+
+    }
+
+    if(correct == total){
+        successGame();
+    }
+
+    if( getNewEmoji == true )
+    {
+        emojiToMimic = emojis[Math.floor(Math.random()*emojis.length)];
+        setTargetEmoji(emojiToMimic)
+        getNewEmoji=false;
+    }
+
+}
+
+function successGame(){
+    myAudio = new Audio('NFF-power-up.wav'); 
+    myAudio.play();
+    alert('Done! your final punctuation: ' + calculate_score());
+    onStop();
+}
+
+function calculate_score(){
+    return Math.floor(600/timer);
+}
+
+function startAmbientalSound(){
+    ambientalSound = new Audio('POL-king-of-coins-short.wav'); 
+    ambientalSound.addEventListener('ended', function() {
+        this.currentTime = 0;
+        this.play();
+    }, false);
+    ambientalSound.play();
+}
+
+function stopAmbientalSound(){
+    ambientalSound.pause();
+}
+
+function resetScore(){
+    correct=0;
+    setScore(correct,total);
+}
+
+//This section is to score the game
+var timer = 0;
+
+
+// Draw the current puctuation and time
+function drawTime(canvas) {
+  // Obtain a 2D context object to draw on the canvas
+  var ctx = canvas.getContext('2d');
+
+
+  ctx.fillStyle = 'rgb(0,0,0)';
+  ctx.font = '14px Arial';
+  ctx.fillText('Time:   '+timer +' [s]', 10,10);  
+  ctx.fillText('Points: '+calculate_score() +' points', 10,30);  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
